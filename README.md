@@ -1,6 +1,6 @@
 # NEXO Tools
 
-Aplicativo Android nativo em português brasileiro: nível X/Y e plano, inclinômetro, ruído, Wi-Fi, rede móvel, latência TCP, Sonar Wi-Fi, velocidade nativa e acesso ao FAST.com/Speedtest, controles IR, player com ganho, câmera noturna, tarefas/macros, histórico e calibração. Tema claro, escuro ou do sistema; preferências e calibrações persistidas localmente. Versão 1.2.1.
+Aplicativo Android nativo em português brasileiro: nível X/Y e plano, inclinômetro, ruído, Wi-Fi, rede móvel, latência TCP, Sonar Wi-Fi, velocidade nativa e acesso ao FAST.com/Speedtest, controles IR, player com ganho, câmera noturna, tarefas/macros, histórico e calibração. Tema claro, escuro ou do sistema; preferências e calibrações persistidas localmente. Versão 1.3.0.
 
 ## Abrir e compilar
 
@@ -73,3 +73,16 @@ Referências oficiais: [AGP 9.5 e compatibilidade](https://developer.android.com
 ## Validação da versão 1.2
 
 O APK debug foi compilado. A suíte contém 55 testes; a nova execução completa pelo Gradle e os testes no celular ficaram para a próxima sessão, conforme combinado. Os testes do motor de velocidade passaram isoladamente; os casos de upload lento e cancelamento receberam sincronização por eventos para evitar dependência do desempenho do computador. Não há confirmação física dos novos layouts e das redes próximas nesta versão.
+
+
+## Ferramentas locais e captura de tráfego
+
+- **Controle principal:** escolha LED ou LG na configuração IR. A escolha persiste; alternar a aba não muda o principal. Macros com destinos LED/LG explícitos mantêm o destino escolhido.
+- **Desinstalador:** busca apps do usuário neste perfil, inclusive sem launcher, e abre a confirmação do Android. Não remove apps de sistema nem o próprio NEXO. O inventário usa `QUERY_ALL_PACKAGES` localmente; a remoção usa `REQUEST_DELETE_PACKAGES` e a tela do sistema.
+- **Portas TCP:** um host e até 256 portas, com oito conexões simultâneas e timeout de um segundo. Recusa e ausência de resposta são diferentes. A captura do próprio NEXO precisa estar parada para evitar falsos positivos causados pela terminação TCP da VPN local.
+- **DNS e TLS:** resolução A/AAAA pelo sistema e inspeção de um handshake TLS com validação padrão de confiança, validade e hostname. Endereços e certificados ficam em memória.
+- **Monitor de tráfego:** VPN inteiramente local, sem root ou outro app. HEV SOCKS5 Tunnel 2.19.3 e um proxy local autenticado encaminham TCP/UDP. O filtro de app é aplicado antes da captura; protocolos, IPs, portas e conexões podem ser filtrados na tela. Apenas 3.000 pacotes, de até 2.048 bytes cada, permanecem em memória; a exportação PCAP respeita o filtro escolhido. Descartes do coletor são contados.
+
+A captura representa a interface virtual, sem modo monitor 802.11. HTTPS, QUIC e DNS criptografado não são descriptografados. ICMP e outros protocolos IP não encaminhados podem falhar durante a sessão. A VPN termina ao parar, revogar sua autorização ou perder a rede usada. No Android 8/9, a identificação por app exige selecionar o app antes de iniciar. WPS brute force e Pixie Dust não estão disponíveis no cenário sem root e sem hardware com modo monitor/injeção.
+
+O motor nativo é compilado com NDK **28.2.13676358**, para armeabi-v7a, arm64-v8a, x86 e x86_64, com alinhamento de 16 KB. Os fontes estão em `app/src/main/cpp/hev`; licenças e avisos são incluídos em `assets/capture-licenses.txt`. A integração aplica apenas hooks PCAP/JNI, cancelamento por sessão e ajustes de build sobre o código vendorizado.

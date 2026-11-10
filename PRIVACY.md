@@ -1,6 +1,6 @@
 # Política de privacidade — NEXO Tools
 
-Versão do aplicativo 1.2.1 · 10 de novembro de 2026.
+Versão do aplicativo 1.3.0 · 10 de novembro de 2026.
 
 O NEXO Tools processa leituras de movimento, microfone e conectividade no aparelho. Não requer conta, não inclui publicidade, análise de uso ou SDK de rastreamento. Áudio é usado para calcular RMS e descartado; gravações não são salvas nem enviadas.
 
@@ -23,3 +23,14 @@ Acessibilidade é opcional e destinada exclusivamente a executar o roteiro está
 Permissões podem ser revogadas nas configurações do Android. O histórico pode ser apagado no aplicativo; desinstalar remove seus dados locais. Não há retenção no servidor porque o aplicativo não possui servidor.
 
 Para a ficha pública na Google Play, o proprietário deve publicar esta política em URL acessível e acrescentar sua identificação e canal de contato antes do lançamento. Esta versão local não inventa identidade ou contato do responsável.
+
+
+## Inventário de apps e monitor de tráfego
+
+O desinstalador e a seleção de captura consultam aplicativos deste perfil somente no aparelho. A lista não é enviada nem gravada em histórico. A desinstalação sempre depende da tela de confirmação do Android.
+
+O monitor solicita autorização de VPN e opera localmente; nenhum servidor de VPN recebe os pacotes. O tráfego TCP/UDP continua para os destinos originais através de sockets protegidos. Não são instalados certificados, interceptado TLS ou bloqueado DNS privado. Protocolos não encaminhados podem deixar de funcionar enquanto a captura está ativa.
+
+A sessão continua quando o usuário abre outro aplicativo. Pode ser encerrada pelo NEXO, pela notificação quando permitida ou pelo controle de VPN do Android. Perder a conexão usada também encerra a sessão. Os últimos 3.000 pacotes (até 2.048 bytes por pacote), endereços, portas e identificação de app ficam em memória até limpar, iniciar nova sessão ou encerrar o processo. Exportar PCAP é uma ação explícita: o usuário escolhe o arquivo, que recebe os pacotes correspondentes aos filtros. Esse arquivo pode conter informações sensíveis das comunicações e permanece no local escolhido pelo usuário.
+
+Consultas DNS/TLS e verificação de portas acessam somente o host informado. Não são salvas automaticamente em histórico nem enviadas a um serviço de análise.
