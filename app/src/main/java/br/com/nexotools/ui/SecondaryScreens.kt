@@ -334,6 +334,8 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
             Hint("Preferências, calibrações e medições salvas ficam no armazenamento privado. Não há conta, publicidade, telemetria ou envio de áudio.")
             Hint("O histórico não guarda SSID, BSSID, IP, identificadores de SIM ou destinos editados. Ocultar dados de rede é o padrão visual.")
             Hint("O Sonar consulta anúncios Wi-Fi e identifica o registro OUI localmente, sem salvar as redes próximas.")
+            Hint("O desinstalador consulta os apps deste perfil localmente e abre a confirmação do Android. Não remove apps silenciosamente.")
+            Hint("A captura VPN mantém em memória até 3.000 pacotes. Exportar PCAP grava apenas os pacotes selecionados pelos filtros, no arquivo escolhido por você.")
         }
         Panel {
             SectionLabel("Permissões por necessidade")
@@ -341,8 +343,10 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
             Metric("Câmera", "Prévia e captura PNG")
             Metric("Localização precisa", "Informações Wi-Fi e células")
             Metric("Telefone", "Sinal e seleção de SIM")
-            Hint("Sensores de movimento não exigem permissão de localização. Capturas param ao sair da ferramenta ou enviar o app para segundo plano.")
-            Hint("Android pode ocultar dados Wi-Fi quando a localização está desligada. O NEXO Tools não solicita acesso em segundo plano.")
+            Metric("VPN local", "Monitor de tráfego")
+            Metric("Apps instalados", "Desinstalador e filtro de captura")
+            Hint("Microfone e câmera param ao deixar a ferramenta ou enviar o app para segundo plano. A captura VPN continua até você parar, revogar a VPN ou perder a conexão usada.")
+            Hint("Android pode ocultar dados Wi-Fi quando a localização está desligada. O NEXO Tools não solicita localização em segundo plano.")
             OutlinedButton(onClick = { runCatching { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) } }, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Gerenciar permissões no Android") }
         }
         Panel {

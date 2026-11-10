@@ -24,6 +24,7 @@ class MainViewModel @Inject constructor(
     val nativeSpeed:SpeedTestSource,
     val mobile:MobileSource,
     val ping:PingSource,
+    val networkProbes:NetworkProbeSource,
     val ir:IrTransmitter,
     val automation:AutomationRepository,
     private val notices:MacroNotifications,

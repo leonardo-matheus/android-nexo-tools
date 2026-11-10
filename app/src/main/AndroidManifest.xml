@@ -11,6 +11,11 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.TRANSMIT_IR" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The uninstaller lists user apps without launcher activities as well. Inventory stays local. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
@@ -32,6 +37,11 @@
             </intent-filter>
         </activity>
         <activity android:name=".MacroEntryActivity" android:exported="false" />
+        <service android:name=".network.PacketCaptureService" android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="true" android:foregroundServiceType="specialUse">
+            <intent-filter><action android:name="android.net.VpnService" /></intent-filter>
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User initiated local VPN packet capture and network diagnostics" />
+        </service>
         <receiver android:name=".automation.MacroStopReceiver" android:exported="false" />
         <service android:name=".automation.NexoAccessibilityService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="true" android:label="@string/nexo_accessibility_label">
             <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>

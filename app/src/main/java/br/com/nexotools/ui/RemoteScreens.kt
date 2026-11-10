@@ -3,6 +3,7 @@ package br.com.nexotools.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -30,6 +32,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.com.nexotools.MainViewModel
 import br.com.nexotools.R
 import br.com.nexotools.domain.IrHardwareStatus
@@ -444,6 +447,8 @@ private object RemoteSwatches {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun RemoteSettingsDialog(vm: MainViewModel, profile: IrProfile, led: Boolean, selectedLed: String, onProfile: (String) -> Unit, sender: RemoteSender, enabled: Boolean, onDismiss: () -> Unit) {
+    val preferences by vm.prefs.collectAsStateWithLifecycle()
+    val primaryRemote = preferences?.primaryRemote ?: "LED"
     var section by rememberSaveable { mutableStateOf("PROFILE") }
     var address by rememberSaveable(profile.id) { mutableStateOf(profile.address.toString(16).uppercase()) }
     var command by rememberSaveable { mutableStateOf("") }
@@ -457,6 +462,18 @@ private object RemoteSwatches {
         } else TextButton(onClick = { section = "NEC" }, modifier = Modifier.heightIn(min = RemoteDimensions.key)) { Text("NEC manual") }
     }
     val content: @Composable () -> Unit = {
+        Text("Controle principal", style = MaterialTheme.typography.bodyMedium)
+        Row(Modifier.fillMaxWidth()) {
+            listOf("LED" to "LED 24", "LG" to "TV LG").forEach { (id, label) ->
+                Row(Modifier.weight(1f).heightIn(min = RemoteDimensions.key).selectable(
+                    selected = primaryRemote == id, role = Role.RadioButton,
+                    onClick = { vm.act { vm.preferences.setPrimaryRemote(id) } },
+                ).semantics { contentDescription = "Usar $label como principal" }, verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = primaryRemote == id, onClick = null)
+                    Text(id, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
         if (section == "PROFILE") {
             if (led) listOf(IrProfiles.led24, IrProfiles.led24F7).forEach { option ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

@@ -22,7 +22,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import br.com.nexotools.MainViewModel
 import br.com.nexotools.R
 
-private val titles=mapOf("network" to "Rede", "tools" to "Ferramentas", "utilities" to "Utilidades", "level" to "Nível de bolha", "angle" to "Inclinômetro", "audio" to "Medidor de ruído", "wifi" to "Analisador Wi-Fi", "wifiDetails" to "Detalhes do Wi-Fi", "mobile" to "Rede móvel", "ping" to "Latência TCP", "speed" to "Teste de velocidade", "sonar" to "Sonar Wi-Fi", "calibration" to "Calibração", "privacy" to "Permissões e privacidade", "history" to "Histórico", "settings" to "Ajustes", "remotes" to "Controles infravermelho", "remoteLed" to "Controles infravermelho", "remoteLg" to "Controles infravermelho", "volumeBoost" to "Volume +", "nightCamera" to "Câmera noturna", "macros" to "Tarefas e macros")
+private val titles=mapOf("network" to "Rede", "tools" to "Ferramentas", "utilities" to "Utilidades", "level" to "Nível de bolha", "angle" to "Inclinômetro", "audio" to "Medidor de ruído", "wifi" to "Analisador Wi-Fi", "wifiDetails" to "Detalhes do Wi-Fi", "mobile" to "Rede móvel", "ping" to "Latência TCP", "speed" to "Teste de velocidade", "sonar" to "Sonar Wi-Fi", "calibration" to "Calibração", "privacy" to "Permissões e privacidade", "history" to "Histórico", "settings" to "Ajustes", "remotes" to "Controles infravermelho", "remoteLed" to "Controles infravermelho", "remoteLg" to "Controles infravermelho", "volumeBoost" to "Volume +", "nightCamera" to "Câmera noturna", "macros" to "Tarefas e macros", "uninstaller" to "Desinstalador", "packets" to "Monitor de tráfego", "ports" to "Portas TCP", "dnsTls" to "DNS e TLS")
 private val catalogRoutes=setOf("home","network","tools","utilities")
 private data class ToolSpec(val route:String,val title:String,val subtitle:String,val icon:Int,val category:String)
 private val toolSpecs=listOf(
@@ -31,6 +31,9 @@ private val toolSpecs=listOf(
     ToolSpec("ping","Latência TCP","Conexão e jitter",R.drawable.ic_activity,"network"),
     ToolSpec("speed","Velocidade","Download, upload e latência",R.drawable.ic_gauge,"network"),
     ToolSpec("sonar","Sonar Wi-Fi","Redes próximas e configuração",R.drawable.ic_radar,"network"),
+    ToolSpec("packets","Monitor de tráfego","Pacotes e conexões",R.drawable.ic_activity,"network"),
+    ToolSpec("ports","Portas TCP","Serviços do host",R.drawable.ic_sliders_horizontal,"network"),
+    ToolSpec("dnsTls","DNS e TLS","DNS e certificados",R.drawable.ic_shield_alert,"network"),
     ToolSpec("level","Nível de bolha","X, Y e plano",R.drawable.ic_target,"tools"),
     ToolSpec("angle","Inclinômetro","Ângulo e horizonte",R.drawable.ic_ruler,"tools"),
     ToolSpec("audio","Ruído","RMS do microfone",R.drawable.ic_audio_lines,"tools"),
@@ -39,6 +42,7 @@ private val toolSpecs=listOf(
     ToolSpec("volumeBoost","Volume +","Ganho no player NEXO",R.drawable.ic_audio_lines,"utilities"),
     ToolSpec("nightCamera","Câmera noturna","Luz e contraste",R.drawable.ic_moon,"utilities"),
     ToolSpec("macros","Tarefas e macros","Rotinas e lembretes",R.drawable.ic_calendar_clock,"utilities"),
+    ToolSpec("uninstaller","Desinstalador","Apps instalados",R.drawable.ic_smartphone,"utilities"),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,7 +106,14 @@ private val toolSpecs=listOf(
                     key(route) {
                     if(route in setOf("remotes","remoteLed","remoteLg")) {
                         Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal=Space.lg,vertical=Space.xs)) {
-                            UnifiedRemoteScreen(vm,initialTab=if(route=="remoteLg")"LG"else"LED")
+                            val initialRemote = remember(route) {
+                                when(route){"remoteLg"->"LG";"remoteLed"->"LED";else->preferences.primaryRemote}
+                            }
+                            UnifiedRemoteScreen(vm,initialTab=initialRemote)
+                        }
+                    } else if (route in setOf("uninstaller", "packets")) {
+                        Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal=Space.lg,vertical=Space.sm)) {
+                            if (route == "uninstaller") UninstallerScreen(vm) else PacketCaptureScreen(vm)
                         }
                     } else Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal=Space.lg,vertical=Space.md),verticalArrangement=Arrangement.spacedBy(Space.lg)) {
                     val onFavorite:(String,Boolean)->Unit={key,enabled->vm.act{vm.preferences.setFavorite(key,enabled)}}
@@ -125,6 +136,8 @@ private val toolSpecs=listOf(
                         "volumeBoost"->VolumeBoostScreen(vm)
                         "nightCamera"->NightVisionScreen(vm)
                         "macros"->AutomationScreen(vm)
+                        "ports"->PortScanScreen(vm.networkProbes)
+                        "dnsTls"->DnsTlsScreen(vm.networkProbes)
                     }
                     Spacer(Modifier.height(Space.md))
                 }

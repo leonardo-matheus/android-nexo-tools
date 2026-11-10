@@ -7,7 +7,7 @@ enum class MacroAction { IR, WAIT, OPEN_TOOL, NOTIFY, OPEN_APP, TAP, SWIPE, BACK
 data class MacroStep(val action:MacroAction,val argument:String="",val detail:String="",val seconds:Int=0)
 
 object MacroRules {
-    val toolRoutes=setOf("level","angle","audio","wifi","mobile","ping","speed","sonar","calibration","remotes","remoteLed","remoteLg","volumeBoost","nightCamera")
+    val toolRoutes=setOf("level","angle","audio","wifi","mobile","ping","speed","sonar","calibration","remotes","remoteLed","remoteLg","volumeBoost","nightCamera","uninstaller","packets","ports","dnsTls")
     val irProfiles=setOf("LED24","LED24_F7","LG_TV")
     fun validate(name:String,steps:List<MacroStep>) {
         require(name.trim().length in 1..64) { "Informe um nome de até 64 caracteres" }

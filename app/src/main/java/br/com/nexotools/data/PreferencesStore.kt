@@ -33,6 +33,7 @@ data class PreferenceState(
     val distanceExponent: Double = 2.0,
     val externalAutomationConsent:Boolean=false,
     val favorites:Set<String> = emptySet(),
+    val primaryRemote: String = "LED",
 )
 
 @Singleton
@@ -47,6 +48,7 @@ class PreferencesStore @Inject constructor(@ApplicationContext context: Context)
     private val distanceExponent = doublePreferencesKey("distance_exponent")
     private val externalConsent=booleanPreferencesKey("external_automation_consent")
     private val favorites=stringSetPreferencesKey("favorites")
+    private val primaryRemote=stringPreferencesKey("primary_remote")
     private fun key(group: String, axis: String) = doublePreferencesKey("${group}_$axis")
     private fun vector(p: Preferences, group: String, default: Vec3): Vec3 = Vec3(
         p[key(group, "x")]?.takeIf { it.isFinite() } ?: default.x,
@@ -69,6 +71,7 @@ class PreferencesStore @Inject constructor(@ApplicationContext context: Context)
             p[distanceExponent]?.takeIf { it.isFinite() && it > 0 } ?: 2.0,
             p[externalConsent]?:false,
             p[favorites]?:emptySet(),
+            p[primaryRemote]?.takeIf { it in setOf("LED", "LG") } ?: "LED",
         )
     }
     suspend fun setTheme(value: String) {
@@ -78,8 +81,9 @@ class PreferencesStore @Inject constructor(@ApplicationContext context: Context)
     suspend fun setHideSensitive(value: Boolean) { store.edit { it[hide] = value } }
     suspend fun completeOnboarding() { store.edit { it[onboarding] = true } }
     suspend fun setExternalAutomationConsent(value:Boolean){store.edit{it[externalConsent]=value}}
+    suspend fun setPrimaryRemote(value:String){require(value in setOf("LED","LG"));store.edit{it[primaryRemote]=value}}
     suspend fun setFavorite(route:String,enabled:Boolean){
-        require(route in setOf("wifi","mobile","ping","speed","sonar","level","angle","audio","calibration","remotes","volumeBoost","nightCamera","macros"))
+        require(route in setOf("wifi","mobile","ping","speed","sonar","level","angle","audio","calibration","remotes","volumeBoost","nightCamera","macros","uninstaller","packets","ports","dnsTls"))
         store.edit { p->val current=p[favorites]?:emptySet();p[favorites]=if(enabled)current+route else current-route }
     }
     suspend fun setAudioOffset(value: Double?) {

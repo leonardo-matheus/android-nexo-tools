@@ -1,6 +1,7 @@
 package br.com.nexotools
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,5 +17,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         model=ViewModelProvider(this)[MainViewModel::class.java]
         setContent { NexoApp(model) }
+        openRequestedTool(intent)
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openRequestedTool(intent)
+    }
+    private fun openRequestedTool(intent: Intent) {
+        if (intent.getBooleanExtra("nexo_open_packets", false)) {
+            intent.removeExtra("nexo_open_packets")
+            model.openTool("packets")
+        }
     }
 }

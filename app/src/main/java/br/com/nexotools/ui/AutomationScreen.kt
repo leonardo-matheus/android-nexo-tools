@@ -29,7 +29,7 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
-private val macroRouteLabels=mapOf("level" to "Nível", "angle" to "Inclinômetro", "audio" to "Ruído", "wifi" to "Wi-Fi", "mobile" to "Rede móvel", "ping" to "Latência", "speed" to "Velocidade", "sonar" to "Sonar Wi-Fi", "remotes" to "Controles IR", "calibration" to "Calibração", "remoteLed" to "LED 24", "remoteLg" to "TV LG", "volumeBoost" to "Volume +", "nightCamera" to "Câmera noturna")
+private val macroRouteLabels=mapOf("level" to "Nível", "angle" to "Inclinômetro", "audio" to "Ruído", "wifi" to "Wi-Fi", "mobile" to "Rede móvel", "ping" to "Latência", "speed" to "Velocidade", "sonar" to "Sonar Wi-Fi", "remotes" to "Controles IR", "calibration" to "Calibração", "remoteLed" to "LED 24", "remoteLg" to "TV LG", "volumeBoost" to "Volume +", "nightCamera" to "Câmera noturna", "uninstaller" to "Desinstalador", "packets" to "Monitor de tráfego", "ports" to "Portas TCP", "dnsTls" to "DNS e TLS")
 private val actionLabels=mapOf(MacroAction.IR to "Comando IR",MacroAction.WAIT to "Espera",MacroAction.OPEN_TOOL to "Abrir ferramenta",MacroAction.NOTIFY to "Lembrete",MacroAction.OPEN_APP to "Abrir aplicativo",MacroAction.TAP to "Toque em aplicativo",MacroAction.SWIPE to "Deslize em aplicativo",MacroAction.BACK to "Voltar no aplicativo",MacroAction.HOME to "Ir à tela inicial")
 private fun stepLabel(step:MacroStep,apps:List<Pair<String,String>>):String=when(step.action) {
     MacroAction.IR->"${IrProfiles.byId[step.argument]?.title?:step.argument}: ${IrProfiles.byId[step.argument]?.commandsById?.get(step.detail)?.label?:step.detail}"
