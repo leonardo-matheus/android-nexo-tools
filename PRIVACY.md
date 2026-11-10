@@ -1,6 +1,6 @@
 # Política de privacidade — NEXO Tools
 
-Versão do aplicativo 1.2.0 · 9 de novembro de 2026.
+Versão do aplicativo 1.2.1 · 10 de novembro de 2026.
 
 O NEXO Tools processa leituras de movimento, microfone e conectividade no aparelho. Não requer conta, não inclui publicidade, análise de uso ou SDK de rastreamento. Áudio é usado para calcular RMS e descartado; gravações não são salvas nem enviadas.
 

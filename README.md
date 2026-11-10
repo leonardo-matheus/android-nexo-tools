@@ -1,6 +1,6 @@
 # NEXO Tools
 
-Aplicativo Android nativo em português brasileiro: nível X/Y e plano, inclinômetro, ruído, Wi-Fi, rede móvel, latência TCP, Sonar Wi-Fi, velocidade nativa e acesso ao FAST.com/Speedtest, controles IR, player com ganho, câmera noturna, tarefas/macros, histórico e calibração. Tema claro, escuro ou do sistema; preferências e calibrações persistidas localmente. Versão 1.2.0.
+Aplicativo Android nativo em português brasileiro: nível X/Y e plano, inclinômetro, ruído, Wi-Fi, rede móvel, latência TCP, Sonar Wi-Fi, velocidade nativa e acesso ao FAST.com/Speedtest, controles IR, player com ganho, câmera noturna, tarefas/macros, histórico e calibração. Tema claro, escuro ou do sistema; preferências e calibrações persistidas localmente. Versão 1.2.1.
 
 ## Abrir e compilar
 
