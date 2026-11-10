@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -94,17 +96,17 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
     Column(verticalArrangement = Arrangement.spacedBy(Space.lg)) {
         Panel {
             SectionLabel(if (running) "Microfone ativo" else "Medição pausada")
-            Text(measured(latest?.dbFs?.plus(offset), prefs.decimals), style = InstrumentStyle, color = MaterialTheme.colorScheme.primary)
+            InstrumentReading(measured(latest?.dbFs?.plus(offset), prefs.decimals))
             Text(unit)
             LinearProgressIndicator(progress = { (((latest?.dbFs ?: -120.0) + 120.0) / 120.0).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
             if (latest?.clipped == true) Hint("Saturação detectada. Esta leitura não serve para calibrar.")
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.md)) {
-                Button(onClick = { running = !running }, enabled = allowed, modifier = Modifier.weight(1f).heightIn(min = Space.touch)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+                Button(onClick = { running = !running }, enabled = allowed, modifier = Modifier.heightIn(min = Space.touch)) {
                     Glyph(if (running) R.drawable.ic_pause else R.drawable.ic_play); Spacer(Modifier.width(Space.sm)); Text(if (running) "Pausar" else "Iniciar")
                 }
-                OutlinedButton(onClick = { running = false; latest = null; samples.clear(); count = 0; energy = 0.0; minimum = null; maximum = null }, modifier = Modifier.weight(1f).heightIn(min = Space.touch)) { Text("Reiniciar") }
+                OutlinedButton(onClick = { running = false; latest = null; samples.clear(); count = 0; energy = 0.0; minimum = null; maximum = null }, modifier = Modifier.heightIn(min = Space.touch)) { Text("Reiniciar") }
             }
-            Hint(if (prefs.audioOffsetDb == null) "dBFS mede nível digital; 0 é saturação. Para estimar dB SPL, use uma referência acústica conhecida." else "Estimativa com referência pessoal, sem ponderação A. O telefone não é um decibelímetro certificado.")
+            Hint(if (prefs.audioOffsetDb == null) "dBFS é nível digital. Para estimar dB SPL, calibre com uma referência conhecida." else "dB SPL estimado, sem ponderação A. O aparelho não é certificado.")
         }
         Panel {
             SectionLabel("Estatísticas da sessão")
@@ -117,7 +119,7 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
         }
         Panel {
             SectionLabel("Calibração acústica")
-            Hint("Use um sonômetro de referência ou calibrador acústico adequado. Grave uma referência estável por ao menos 2 segundos; não use um valor presumido do ambiente.")
+            Hint("Use sonômetro ou calibrador de referência. Mantenha o som estável por 2 segundos; não estime o valor do ambiente.")
             OutlinedTextField(reference, { reference = it }, label = { Text("Referência conhecida em dB SPL") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.fillMaxWidth())
             Button(onClick = {
                 runCatching {
@@ -156,23 +158,23 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
             SectionLabel("Destino do teste")
             OutlinedTextField(host, { host = it }, enabled = !running, label = { Text("Host ou IPv4") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(port, { port = it }, enabled = !running, label = { Text("Porta TCP") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
                 FilterChip(selected = host == "one.one.one.one", onClick = { host = "one.one.one.one"; port = "443" }, enabled = !running, label = { Text("Cloudflare") })
                 FilterChip(selected = host == "www.google.com", onClick = { host = "www.google.com"; port = "443" }, enabled = !running, label = { Text("Google") })
             }
-            Button(onClick = { running = !running }, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Glyph(if (running) R.drawable.ic_pause else R.drawable.ic_play); Spacer(Modifier.width(Space.sm)); Text(if (running) "Interromper teste" else "Iniciar 10 conexões") }
-            Hint("Método: TCP connect. Timeout de 3 segundos; DNS é resolvido antes e não entra na latência. O destino recebe conexões sem conteúdo.")
+            Button(onClick = { running = !running }, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Glyph(if (running) R.drawable.ic_pause else R.drawable.ic_play); Spacer(Modifier.width(Space.sm)); Text(if (running) "Interromper" else "Testar 10 conexões") }
+            Hint("Conexão TCP, com timeout de 3 segundos. DNS não entra na latência; nenhum conteúdo é enviado.")
         }
         Panel {
             SectionLabel(if (running) "Testando · ${samples.size}/10" else "Resultado TCP")
-            Text(measured(samples.lastOrNull()?.latencyMs, prefs.decimals, "ms"), style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary)
+            InstrumentReading(measured(samples.lastOrNull()?.latencyMs, prefs.decimals, "ms"))
             Metric("Mínima", measured(stats.minimumMs, prefs.decimals, "ms"))
             Metric("Máxima", measured(stats.maximumMs, prefs.decimals, "ms"))
             Metric("Média", measured(stats.meanMs, prefs.decimals, "ms"))
             Metric("Jitter", measured(stats.jitterMs, prefs.decimals, "ms"))
             Metric("Falhas de conexão", if (stats.sent > 0) measured(stats.lossPercent, 0, "%") else "Não disponível")
             Trace(samples.mapNotNull { it.latencyMs })
-            Hint("Falhas TCP não equivalem à perda de pacotes ICMP. Jitter: diferença absoluta média entre sucessos consecutivos. Gráfico inclui somente sucessos.")
+            Hint("Falhas TCP não são perda ICMP. Jitter é a variação entre sucessos consecutivos; o gráfico mostra esses sucessos.")
             samples.forEach { sample -> Metric("Conexão ${sample.sequence}", sample.latencyMs?.let { measured(it, prefs.decimals, "ms") } ?: "Falha ou timeout") }
             OutlinedButton(onClick = { vm.save("Latência TCP", "${stats.received}/${stats.sent} conexões · média ${measured(stats.meanMs, prefs.decimals, "ms")} · falhas ${measured(stats.lossPercent, 0, "%")}", samples.joinToString(",") { it.latencyMs?.toString() ?: "falha" }) }, enabled = !running && samples.isNotEmpty(), modifier = Modifier.heightIn(min = Space.touch)) { Glyph(R.drawable.ic_save); Spacer(Modifier.width(Space.sm)); Text("Salvar resultado") }
         }
@@ -211,7 +213,7 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
         }
         RadioPanel("LTE · referência da célula", reading.lte, prefs.decimals)
         RadioPanel("NR · referência SS", reading.nr, prefs.decimals)
-        Hint("Dados são fornecidos pelo modem e podem estar em cache. 5G disponível não confirma uma sessão NR ativa. Métricas LTE e NR são separadas; SA não é presumido.")
+        Hint("Dados do modem podem estar em cache. 5G disponível não confirma NR ativo; LTE e NR são separados, sem presumir SA.")
     }
 }
 
@@ -265,7 +267,7 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
     Column(verticalArrangement = Arrangement.spacedBy(Space.lg)) {
         Panel {
             SectionLabel("Calibração dos sensores")
-            Hint("Seis posições estimam viés e escala dos eixos. Use a orientação natural do aparelho, uma superfície firme, tire capas irregulares e evite vibração. Em tablets de orientação natural paisagem, confira X/Y. A precisão depende do hardware.")
+            Hint("Use a orientação natural do aparelho, superfície firme e sem vibração. Retire capas irregulares; em tablets paisagem, confira X/Y. A precisão depende do hardware.")
             Metric("Acelerômetro", if (prefs.calibration.offset != Vec3.ZERO || prefs.calibration.scale != Vec3.ONES) "Parâmetros pessoais" else "Padrão do aparelho")
             Metric("Viés do giroscópio", measured(prefs.calibration.gyroBias.norm(), 4, "rad/s"))
             Metric("Referência relativa", if (prefs.calibration.reference != null) "Ativa" else "Horizontal por gravidade")
@@ -282,42 +284,44 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
             Hint("Toque em capturar; há 3 segundos para posicionar ou virar o aparelho. A captura exige 40 amostras estáveis.")
             if (operation != null) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (progress.isNotBlank()) Hint(progress)
-            Button(onClick = { operation = "face" }, enabled = operation == null, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Capturar posição selecionada") }
+            Button(onClick = { operation = "face" }, enabled = operation == null, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Capturar posição") }
             if (operation != null) TextButton(onClick = { operation = null; progress = "Captura cancelada" }) { Text("Cancelar captura") }
-            OutlinedButton(onClick = { calibrator.finish().onSuccess { result -> vm.act { vm.preferences.setCalibration(result); vm.setMessage("Calibração de seis posições aplicada") } }.onFailure { vm.setMessage(it.message ?: "Capture todas as posições") } }, enabled = poses.size == 6 && operation == null, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Aplicar calibração completa") }
+            OutlinedButton(onClick = { calibrator.finish().onSuccess { result -> vm.act { vm.preferences.setCalibration(result); vm.setMessage("Calibração de seis posições aplicada") } }.onFailure { vm.setMessage(it.message ?: "Capture todas as posições") } }, enabled = poses.size == 6 && operation == null, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Aplicar calibração") }
         }
         Panel {
             SectionLabel("Giroscópio · viés em repouso")
-            Hint("Deixe o aparelho imóvel. Esta etapa usa as velocidades angulares reais; aparelhos sem giroscópio continuam usando gravidade/acelerômetro.")
+            Hint("Deixe o aparelho imóvel. Sem giroscópio, o nível continua usando gravidade ou acelerômetro.")
             OutlinedButton(onClick = { operation = "gyro" }, enabled = operation == null, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Estimar viés em repouso") }
-            TextButton(onClick = { restoreDialog = true }, enabled = operation == null) { Text("Restaurar todos os padrões de calibração") }
+            TextButton(onClick = { restoreDialog = true }, enabled = operation == null) { Text("Restaurar padrões") }
         }
     }
-    if (restoreDialog) AlertDialog(onDismissRequest = { restoreDialog = false }, title = { Text("Restaurar calibração?") }, text = { Text("Remove viés, escala, zeragem relativa e referência acústica salvos neste aparelho.") }, confirmButton = { TextButton(onClick = { restoreDialog = false; vm.act { vm.preferences.resetCalibration(); vm.setMessage("Calibração restaurada") } }) { Text("Restaurar") } }, dismissButton = { TextButton(onClick = { restoreDialog = false }) { Text("Cancelar") } })
+    if (restoreDialog) AlertDialog(onDismissRequest = { restoreDialog = false }, title = { Text("Restaurar calibração?") }, text = { Text("Remove viés, escala, zeragem relativa e referência acústica salvos neste aparelho.", Modifier.verticalScroll(rememberScrollState())) }, confirmButton = { TextButton(onClick = { restoreDialog = false; vm.act { vm.preferences.resetCalibration(); vm.setMessage("Calibração restaurada") } }) { Text("Restaurar") } }, dismissButton = { TextButton(onClick = { restoreDialog = false }) { Text("Cancelar") } })
 }
 
 @Composable fun SettingsScreen(vm: MainViewModel, prefs: PreferenceState, onNavigate: (String) -> Unit) {
+    val context = LocalContext.current
+    @Suppress("DEPRECATION") val version = remember(context) { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "Não disponível" }
     Column(verticalArrangement = Arrangement.spacedBy(Space.lg)) {
         Panel {
             SectionLabel("Aparência")
             listOf(Triple("SYSTEM", "Seguir o sistema", R.drawable.ic_monitor), Triple("DARK", "Escuro", R.drawable.ic_moon), Triple("LIGHT", "Claro", R.drawable.ic_sun)).forEach { (key, label, icon) ->
                 Row(Modifier.fillMaxWidth().heightIn(min = Space.touch).clickable { vm.act { vm.preferences.setTheme(key) } }, verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(prefs.theme == key, { vm.act { vm.preferences.setTheme(key) } }); Glyph(icon); Spacer(Modifier.width(Space.md)); Text(label)
+                    RadioButton(prefs.theme == key, { vm.act { vm.preferences.setTheme(key) } }); Glyph(icon); Spacer(Modifier.width(Space.md)); Text(label, Modifier.weight(1f))
                 }
             }
         }
         Panel {
             SectionLabel("Leituras e privacidade")
             Text("Casas decimais")
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) { (0..3).forEach { value -> FilterChip(selected = prefs.decimals == value, onClick = { vm.act { vm.preferences.setDecimals(value) } }, label = { Text(value.toString()) }) } }
-            Hint("Mais casas decimais não aumentam a precisão do sensor.")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalArrangement = Arrangement.spacedBy(Space.sm)) { (0..3).forEach { value -> FilterChip(selected = prefs.decimals == value, onClick = { vm.act { vm.preferences.setDecimals(value) } }, label = { Text(value.toString()) }) } }
+            Hint("Não altera o nível ou inclinômetro, que mostram graus inteiros. Mais casas não aumentam a precisão.")
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Ocultar nomes e endereços de rede", Modifier.weight(1f)); Switch(prefs.hideSensitive, { vm.act { vm.preferences.setHideSensitive(it) } })
+                Text("Ocultar redes e endereços", Modifier.weight(1f)); Switch(prefs.hideSensitive, { vm.act { vm.preferences.setHideSensitive(it) } })
             }
             OutlinedButton(onClick = { onNavigate("calibration") }, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Calibração dos instrumentos") }
             OutlinedButton(onClick = { onNavigate("privacy") }, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Permissões e privacidade") }
         }
-        Hint("NEXO Tools · 1.1.0. Medições pessoais; sem certificação metrológica.")
+        Hint("Versão $version")
     }
 }
 
@@ -333,7 +337,8 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
         }
         Panel {
             SectionLabel("Permissões por necessidade")
-            Metric("Microfone", "Somente para medir ruído")
+            Metric("Microfone", "Medidor de ruído")
+            Metric("Câmera", "Prévia e captura PNG")
             Metric("Localização precisa", "Informações Wi-Fi e células")
             Metric("Telefone", "Sinal e seleção de SIM")
             Hint("Sensores de movimento não exigem permissão de localização. Capturas param ao sair da ferramenta ou enviar o app para segundo plano.")
@@ -344,7 +349,7 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
             SectionLabel("Conexões externas")
             Hint("Testes TCP acessam o host escolhido e revelam seu IP ao destino, como qualquer conexão de internet. FAST.com e Speedtest abrem serviços externos e seguem suas políticas.")
             Hint("O teste nativo conecta à Cloudflare, que recebe seu IP e as requisições de medição. Os resultados só ficam no histórico se você salvar.")
-            Hint("Nenhum resultado externo é presumido ou salvo automaticamente. RSSI, distância e nível acústico calibrado são estimativas dependentes do aparelho e do ambiente.")
+            Hint("Resultados externos não são presumidos nem salvos automaticamente.")
         }
     }
 }
@@ -356,28 +361,28 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
     Column(verticalArrangement = Arrangement.spacedBy(Space.lg)) {
         if (entries.isEmpty()) Panel { Glyph(R.drawable.ic_rotate_ccw); SectionLabel("Seu histórico começa aqui"); Hint("Salve uma medição em um instrumento. Somente resultados reais são registrados.") }
         else {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.md), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
                 SectionLabel("Últimas ${entries.size} medições")
                 TextButton(onClick = { clearDialog = true }) { Text("Apagar histórico") }
             }
             entries.forEach { entry -> Panel { SectionLabel(entry.tool); Hint(date.format(Date(entry.timestamp))); Text(entry.summary) } }
         }
     }
-    if (clearDialog) AlertDialog(onDismissRequest = { clearDialog = false }, title = { Text("Apagar o histórico?") }, text = { Text("As medições salvas serão removidas deste aparelho. Esta ação não pode ser desfeita.") }, confirmButton = { TextButton(onClick = { clearDialog = false; vm.clearHistory() }) { Text("Apagar") } }, dismissButton = { TextButton(onClick = { clearDialog = false }) { Text("Cancelar") } })
+    if (clearDialog) AlertDialog(onDismissRequest = { clearDialog = false }, title = { Text("Apagar o histórico?") }, text = { Text("As medições salvas serão removidas deste aparelho. Esta ação não pode ser desfeita.", Modifier.verticalScroll(rememberScrollState())) }, confirmButton = { TextButton(onClick = { clearDialog = false; vm.clearHistory() }) { Text("Apagar") } }, dismissButton = { TextButton(onClick = { clearDialog = false }) { Text("Cancelar") } })
 }
 
 @Composable fun SpeedScreen() {
     val context = LocalContext.current
     var failure by remember { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(Space.lg)) {
-        Hint("Escolha um serviço oficial. O teste acontece no navegador; use Voltar para retornar ao NEXO Tools.")
+        Hint("O serviço abre no navegador. Use Voltar para retornar ao NEXO.")
         listOf(Triple("FAST.com · Netflix", "https://fast.com/pt/", "Teste externo de download, upload e latência com a infraestrutura da Netflix."), Triple("Speedtest · Ookla", "https://www.speedtest.net/", "Teste externo com seleção de servidor e métricas fornecidas pela Ookla.")).forEach { (name, url, explanation) ->
             Panel {
                 Glyph(R.drawable.ic_gauge); SectionLabel(name); Hint(explanation)
-                Button(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }.onFailure { failure = "Nenhum navegador disponível para abrir o serviço" } }, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Abrir serviço oficial"); Spacer(Modifier.width(Space.sm)); Glyph(R.drawable.ic_arrow_up_right) }
+                Button(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }.onFailure { failure = "Nenhum navegador disponível para abrir o serviço" } }, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Abrir serviço"); Spacer(Modifier.width(Space.sm)); Glyph(R.drawable.ic_arrow_up_right) }
             }
         }
         failure?.let { Hint(it) }
-        Hint("Testes podem consumir muitos dados. Não há coleta automática de resultados, scraping ou integração privada. A abertura de um serviço não gera uma entrada no histórico.")
+        Hint("Pode consumir muitos dados. Abrir o serviço não salva resultados no histórico.")
     }
 }

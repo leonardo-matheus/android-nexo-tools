@@ -10,9 +10,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,7 +30,7 @@ private val toolSpecs=listOf(
     ToolSpec("mobile","Rede móvel","Métricas 4G e 5G",R.drawable.ic_smartphone,"network"),
     ToolSpec("ping","Latência TCP","Conexão e jitter",R.drawable.ic_activity,"network"),
     ToolSpec("speed","Velocidade","Download, upload e latência",R.drawable.ic_gauge,"network"),
-    ToolSpec("sonar","Sonar Wi-Fi","Redes próximas e configuração",R.drawable.ic_wifi,"network"),
+    ToolSpec("sonar","Sonar Wi-Fi","Redes próximas e configuração",R.drawable.ic_radar,"network"),
     ToolSpec("level","Nível de bolha","X, Y e plano",R.drawable.ic_target,"tools"),
     ToolSpec("angle","Inclinômetro","Ângulo e horizonte",R.drawable.ic_ruler,"tools"),
     ToolSpec("audio","Ruído","RMS do microfone",R.drawable.ic_audio_lines,"tools"),
@@ -55,17 +55,22 @@ private val toolSpecs=listOf(
     }
     var route by rememberSaveable { mutableStateOf("home") }
     var lastCatalog by rememberSaveable { mutableStateOf("home") }
+    var backStack by rememberSaveable { mutableStateOf(emptyList<String>()) }
     val snackbar=remember { SnackbarHostState() }
     NexoTheme(prefs?.theme?:"SYSTEM") {
         val preferences=prefs
         if(preferences==null) { SplashScreen(); return@NexoTheme }
         if(!preferences.onboardingDone) { OnboardingScreen{vm.act{vm.preferences.completeOnboarding()}};return@NexoTheme }
         fun navigate(to:String){
-            if(to in catalogRoutes)lastCatalog=to
+            if(to==route)return
+            if(to in catalogRoutes){lastCatalog=to;backStack=emptyList()}
+            else backStack=backStack+route
             route=to
         }
         fun back(){
-            if(route=="wifiDetails")route="wifi"
+            if(backStack.isNotEmpty()){route=backStack.last();backStack=backStack.dropLast(1)}
+            else if(route=="wifiDetails")route="wifi"
+            else if(route=="privacy")route="settings"
             else if(route in catalogRoutes)navigate("home")
             else route=lastCatalog
         }
@@ -75,24 +80,31 @@ private val toolSpecs=listOf(
         BackHandler(route!="home"){back()}
         Scaffold(
             containerColor=MaterialTheme.colorScheme.background,
-            snackbarHost={SnackbarHost(snackbar)},
+            snackbarHost={SnackbarHost(snackbar,Modifier.imePadding())},
             topBar={TopAppBar(
-                title={if(route=="home") Text("NEXO TOOLS",fontWeight=FontWeight.Bold,letterSpacing=2.sp,style=MaterialTheme.typography.titleMedium)else Text(titles[route]?:"NEXO Tools",style=MaterialTheme.typography.titleLarge)},
+                title={if(route=="home") Text("NEXO TOOLS",fontWeight=FontWeight.Bold,letterSpacing=2.sp,style=MaterialTheme.typography.titleMedium)else Text(if(route in setOf("remotes","remoteLed","remoteLg"))"Controles IR" else titles[route]?:"NEXO Tools",style=MaterialTheme.typography.titleLarge,maxLines=1,overflow=TextOverflow.Ellipsis)},
                 navigationIcon={if(!root)IconButton(onClick={back()}){Glyph(R.drawable.ic_arrow_left,"Voltar")}},
                 actions={
-                    if(route!="history")IconButton(onClick={navigate("history")}){Glyph(R.drawable.ic_rotate_ccw,"Histórico")}
-                    if(route!="settings")IconButton(onClick={navigate("settings")}){Glyph(R.drawable.ic_settings_2,"Ajustes")}
+                    if(root){
+                        IconButton(onClick={navigate("history")}){Glyph(R.drawable.ic_rotate_ccw,"Histórico")}
+                        IconButton(onClick={navigate("settings")}){Glyph(R.drawable.ic_settings_2,"Ajustes")}
+                    }
                 },
                 colors=TopAppBarDefaults.topAppBarColors(containerColor=MaterialTheme.colorScheme.background)
             )},
-            bottomBar={if(root) NavigationBar(containerColor=MaterialTheme.colorScheme.surface){
-                listOf(Triple("home","Início",R.drawable.ic_star),Triple("network","Rede",R.drawable.ic_wifi),Triple("tools","Ferramentas",R.drawable.ic_wrench),Triple("utilities","Utilidades",R.drawable.ic_sliders_horizontal)).forEach{(key,label,icon)->NavigationBarItem(selected=route==key,onClick={navigate(key)},icon={Glyph(icon)},label={Text(label)})}
+            bottomBar={if(root) NavigationBar(modifier=Modifier.height((if(LocalDensity.current.fontScale>1.3f)112.dp else 80.dp)+WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),containerColor=MaterialTheme.colorScheme.surface){
+                listOf(Triple("home","Início",R.drawable.ic_star),Triple("network","Rede",R.drawable.ic_wifi),Triple("tools","Ferramentas",R.drawable.ic_wrench),Triple("utilities","Utilidades",R.drawable.ic_sliders_horizontal)).forEach{(key,label,icon)->NavigationBarItem(selected=route==key,onClick={navigate(key)},icon={Glyph(icon)},label={Text(label,maxLines=2,textAlign=androidx.compose.ui.text.style.TextAlign.Center)})}
             }}
         ){padding->
-            Box(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.TopCenter){
-                key(route) {
-                Column(Modifier.widthIn(max=Dimensions.contentMax).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal=Space.lg,vertical=Space.md),verticalArrangement=Arrangement.spacedBy(Space.lg)) {
-                    macroProgress?.let{progress->Panel{Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text(progress,Modifier.weight(1f));TextButton({vm.cancelMacro()}){Text("Interromper macro")}}}}
+            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),contentAlignment=Alignment.TopCenter){
+                Column(Modifier.widthIn(max=Dimensions.contentMax).fillMaxSize()) {
+                    macroProgress?.let{progress->Surface(color=MaterialTheme.colorScheme.secondaryContainer){Row(Modifier.fillMaxWidth().padding(horizontal=Space.lg),verticalAlignment=Alignment.CenterVertically){Text(progress,Modifier.weight(1f),style=MaterialTheme.typography.labelLarge);TextButton({vm.cancelMacro()}){Text("Interromper")}}}}
+                    key(route) {
+                    if(route in setOf("remotes","remoteLed","remoteLg")) {
+                        Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal=Space.lg,vertical=Space.xs)) {
+                            UnifiedRemoteScreen(vm,initialTab=if(route=="remoteLg")"LG"else"LED")
+                        }
+                    } else Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal=Space.lg,vertical=Space.md),verticalArrangement=Arrangement.spacedBy(Space.lg)) {
                     val onFavorite:(String,Boolean)->Unit={key,enabled->vm.act{vm.preferences.setFavorite(key,enabled)}}
                     when(route){
                         "home"->HomeScreen(preferences.favorites,onFavorite,::navigate)
@@ -110,13 +122,12 @@ private val toolSpecs=listOf(
                         "history"->HistoryScreen(vm)
                         "settings"->SettingsScreen(vm,preferences,::navigate)
                         "privacy"->PrivacyScreen()
-                        "remotes","remoteLed"->UnifiedRemoteScreen(vm,initialTab="LED")
-                        "remoteLg"->UnifiedRemoteScreen(vm,initialTab="LG")
                         "volumeBoost"->VolumeBoostScreen(vm)
                         "nightCamera"->NightVisionScreen(vm)
                         "macros"->AutomationScreen(vm)
                     }
                     Spacer(Modifier.height(Space.md))
+                }
                 }
                 }
             }
@@ -147,23 +158,32 @@ private val toolSpecs=listOf(
     ToolGrid(toolSpecs.filter{it.category==category},favorites,onFavorite,onNavigate)
 }
 @Composable private fun ToolGrid(tools:List<ToolSpec>,favorites:Set<String>,onFavorite:(String,Boolean)->Unit,onNavigate:(String)->Unit){
-    val columns=if(LocalConfiguration.current.screenWidthDp<360 || LocalDensity.current.fontScale>1.3f)1 else 2
-    tools.chunked(columns).forEach{row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(Space.md)){
-        row.forEach{tool->
-            val pinned=tool.route in favorites
-            Card(onClick={onNavigate(tool.route)},modifier=Modifier.weight(1f).heightIn(min=Dimensions.tileMinHeight),shape=androidx.compose.foundation.shape.RoundedCornerShape(Dimensions.panelRadius),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)){
-                Column(Modifier.padding(Space.lg),verticalArrangement=Arrangement.spacedBy(Space.md)){
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
-                        Glyph(tool.icon)
-                        IconButton(onClick={onFavorite(tool.route,!pinned)},modifier=Modifier.size(Space.touch),colors=IconButtonDefaults.iconButtonColors(contentColor=if(pinned)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)){
-                            Glyph(R.drawable.ic_star,if(pinned)"Desafixar "+tool.title else "Fixar "+tool.title)
+    val density=LocalDensity.current
+    val labelStyle=MaterialTheme.typography.titleMedium
+    val labelHeight=with(density){labelStyle.lineHeight.toDp()*2}
+    val tileHeight=Space.touch+Space.sm+labelHeight+Space.md*2
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val minWidth=136.dp*density.fontScale.coerceIn(1f,1.5f)
+        val columns=((maxWidth+Space.md)/(minWidth+Space.md)).toInt().coerceIn(1,3)
+        Column(verticalArrangement=Arrangement.spacedBy(Space.md)) {
+            tools.chunked(columns).forEach{row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(Space.md)){
+                row.forEach{tool->
+                    val pinned=tool.route in favorites
+                    Card(onClick={onNavigate(tool.route)},modifier=Modifier.weight(1f).height(tileHeight),shape=androidx.compose.foundation.shape.RoundedCornerShape(Dimensions.panelRadius),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)){
+                        Column(Modifier.fillMaxSize().padding(Space.md),verticalArrangement=Arrangement.spacedBy(Space.sm)){
+                            Row(Modifier.fillMaxWidth().height(Space.touch),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+                                Glyph(tool.icon)
+                                IconToggleButton(checked=pinned,onCheckedChange={onFavorite(tool.route,it)},modifier=Modifier.size(Space.touch),colors=IconButtonDefaults.iconToggleButtonColors(checkedContainerColor=MaterialTheme.colorScheme.primary.copy(alpha=.12f),checkedContentColor=MaterialTheme.colorScheme.primary)){
+                                    Glyph(R.drawable.ic_star,if(pinned)"Desafixar "+tool.title else "Fixar "+tool.title)
+                                }
+                            }
+                            Text(tool.title,style=labelStyle,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis)
                         }
                     }
-                    Text(tool.title,style=MaterialTheme.typography.titleMedium)
-                    Hint(tool.subtitle)
                 }
-            }
+                repeat(columns-row.size){Spacer(Modifier.weight(1f))}
+            }}
         }
-    }}
+    }
 }
 

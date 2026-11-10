@@ -1,11 +1,13 @@
 package br.com.nexotools.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -49,16 +51,16 @@ private fun speedValue(value: Double?, decimals: Int = 1, suffix: String = ""): 
     }
     Panel {
         SectionLabel("Teste NEXO · Cloudflare")
-        Hint("Meça download, upload e resposta da conexão sem sair do NEXO. Usa infraestrutura Cloudflare; é independente dos testes FAST e Ookla.")
+        Hint("Download, upload e resposta HTTP com Cloudflare, sem sair do NEXO. Independente de FAST e Ookla.")
         SpeedProfile.entries.forEach { profile ->
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                RadioButton(selected == profile.name, onClick = { selected = profile.name }, enabled = !running)
+            Row(Modifier.fillMaxWidth().heightIn(min = Space.touch).selectable(selected == profile.name, enabled = !running, role = Role.RadioButton, onClick = { selected = profile.name }),verticalAlignment=Alignment.CenterVertically) {
+                RadioButton(selected == profile.name, onClick = null, enabled = !running)
                 Text(profile.title, Modifier.weight(1f))
             }
         }
         Hint("O consumo total pode ser um pouco maior que o limite indicado. Se a franquia for limitada, escolha Economia ou use Wi-Fi.")
-        Row(Modifier.fillMaxWidth()) {
-            Text("Medir latência durante as transferências", Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically) {
+            Text("Latência durante o teste", Modifier.weight(1f))
             Switch(loaded, { loaded = it }, enabled = !running)
         }
         Button(onClick = {
@@ -73,6 +75,7 @@ private fun speedValue(value: Double?, decimals: Int = 1, suffix: String = ""): 
         }, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text(if (running) "Cancelar teste" else "Iniciar teste nativo") }
         Hint("Até 12 segundos por direção e limite total de 55 segundos. O teste encerra antes se atingir o perfil de dados.")
     }
+    if(state.stage!=SpeedStage.READY){
     Panel {
         SectionLabel(when (state.stage) {
             SpeedStage.READY -> "Pronto para iniciar"
@@ -84,7 +87,7 @@ private fun speedValue(value: Double?, decimals: Int = 1, suffix: String = ""): 
             SpeedStage.ERROR -> "Teste não concluído"
         })
         if (state.stage in setOf(SpeedStage.DOWNLOAD, SpeedStage.UPLOAD)) {
-            Text(speedValue(state.currentMbps, prefs.decimals, " Mbps"), style = InstrumentStyle, color = MaterialTheme.colorScheme.primary)
+            InstrumentReading(speedValue(state.currentMbps, prefs.decimals, " Mbps"))
             Hint(if (state.stage == SpeedStage.UPLOAD) "Velocidade estimada durante o envio. Aguarde o fim para o resultado." else "Velocidade durante o download")
             LinearProgressIndicator(progress = { state.phaseProgress }, modifier = Modifier.fillMaxWidth())
         } else if (running) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -94,7 +97,6 @@ private fun speedValue(value: Double?, decimals: Int = 1, suffix: String = ""): 
         Metric("Dados de upload", speedValue(state.uploadBytes / 1_000_000.0, 1, " MB"))
         Metric("Duração", "${state.elapsedMs / 1000} s")
         state.message?.let { Hint(it) }
-        if (state.shortSample) Hint("Amostra curta: limites baixos em conexões rápidas reduzem o período observado e a confiança do resultado.")
         OutlinedButton(onClick = { vm.save("Velocidade nativa", "Cloudflare · download ${speedValue(state.downloadMbps, prefs.decimals, "Mbps")} · upload ${speedValue(state.uploadMbps, prefs.decimals, "Mbps")} · HTTP ${speedValue(state.unloaded.medianMs, prefs.decimals, "ms")}${if (state.shortSample) " · amostra curta" else ""}") },
             enabled = !running && state.stage == SpeedStage.COMPLETE && state.downloadMbps != null && state.uploadMbps != null,
             modifier = Modifier.heightIn(min = Space.touch)) { Text("Salvar resultado real") }
@@ -110,12 +112,13 @@ private fun speedValue(value: Double?, decimals: Int = 1, suffix: String = ""): 
         Hint("Tempo de resposta do servidor web. Pode diferir do ping de outros serviços. Jitter é a variação entre respostas; este teste não mede perda de pacotes.")
     }
     Panel {
-        SectionLabel("Velocidade durante o teste")
+        SectionLabel("Evolução da velocidade")
         val down = state.trace.filter { it.stage == SpeedStage.DOWNLOAD }.map { it.mbps }
         val up = state.trace.filter { it.stage == SpeedStage.UPLOAD }.map { it.mbps }
         if (down.isNotEmpty()) { Hint("Evolução do download"); Trace(down) }
         if (up.isNotEmpty()) { Hint("Evolução do upload"); Trace(up) }
         if (down.isEmpty() && up.isEmpty()) Hint("O gráfico aparece quando houver transferência observada por tempo suficiente.")
+    }
     }
     Hint("A Cloudflare recebe seu IP e o tráfego do teste. O histórico fica no aparelho. O teste para ao sair da tela ou enviar o app ao segundo plano.")
     TextButton(onClick={showOfficial=!showOfficial},enabled=!running){Text(if(showOfficial)"Ocultar serviços oficiais" else "Comparar com FAST e Ookla")}

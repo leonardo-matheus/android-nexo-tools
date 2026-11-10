@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -17,10 +19,15 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlin.math.*
+import br.com.nexotools.domain.AngleDisplay
 
 @Composable fun Glyph(id:Int,description:String?=null,modifier:Modifier=Modifier) {
     Icon(painterResource(id),description,modifier.size(Dimensions.glyph))
@@ -32,9 +39,29 @@ import kotlin.math.*
 }
 @Composable fun Hint(text:String) { Text(text,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
 @Composable fun Metric(label:String,value:String) {
-    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(Space.md),verticalAlignment=Alignment.Top) {
         Text(label,Modifier.weight(1f),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium)
         Text(value,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+    }
+}
+@Composable fun InstrumentReading(text:String,modifier:Modifier=Modifier,color:Color=MaterialTheme.colorScheme.primary) {
+    val measurer=rememberTextMeasurer(cacheSize=32)
+    val density=LocalDensity.current
+    BoxWithConstraints(modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
+        val available=with(density){maxWidth.toPx()}
+        val fontSize=remember(text,available,density.density,density.fontScale) {
+            val full=measurer.measure(AnnotatedString(text),style=InstrumentStyle,softWrap=false,maxLines=1)
+            if(full.size.width<=available)return@remember InstrumentStyle.fontSize
+            var low=8f
+            var high=InstrumentStyle.fontSize.value
+            repeat(8) {
+                val size=(low+high)/2
+                val width=measurer.measure(AnnotatedString(text),style=InstrumentStyle.copy(fontSize=size.sp),softWrap=false,maxLines=1).size.width
+                if(width<=available)low=size else high=size
+            }
+            low.sp
+        }
+        Text(text,style=InstrumentStyle.copy(fontSize=fontSize),color=color,maxLines=1,softWrap=false)
     }
 }
 @Composable fun SectionLabel(text:String) { Text(text,style=MaterialTheme.typography.titleMedium) }
@@ -74,7 +101,7 @@ import kotlin.math.*
 }
 @Composable fun Horizon(pitch:Double,roll:Double) {
     val accent=MaterialTheme.colorScheme.primary;val rim=MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=.85f);val fill=MaterialTheme.colorScheme.surfaceVariant
-    Canvas(Modifier.fillMaxWidth().height(Dimensions.horizonHeight).semantics{contentDescription="Horizonte: pitch $pitch graus, roll $roll graus"}) {
+    Canvas(Modifier.fillMaxWidth().height(Dimensions.horizonHeight).semantics{contentDescription="Horizonte: X ${AngleDisplay.format(pitch)}, Y ${AngleDisplay.format(roll)}"}) {
         val c=Offset(size.width/2,size.height/2);val r=size.height*.46f;drawCircle(fill,r,c);drawCircle(rim,r,c,style=Stroke(2.dp.toPx()));drawLine(rim,Offset(c.x-r,c.y),Offset(c.x+r,c.y));val a=Math.toRadians(roll);val dy=(pitch.coerceIn(-45.0,45.0)/45*r*.5).toFloat();drawLine(accent,Offset(c.x-(cos(a)*r*.85).toFloat(),c.y-dy-(sin(a)*r*.85).toFloat()),Offset(c.x+(cos(a)*r*.85).toFloat(),c.y-dy+(sin(a)*r*.85).toFloat()),3.dp.toPx(),StrokeCap.Round);drawCircle(accent,4.dp.toPx(),c)
     }
 }

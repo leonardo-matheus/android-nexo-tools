@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -63,17 +64,17 @@ private fun playbackTime(milliseconds: Int): String {
     Panel {
         Glyph(R.drawable.ic_audio_lines)
         SectionLabel("Ganho de áudio local")
-        Hint("Selecione um arquivo de áudio. O efeito modifica somente o player do NEXO Tools; o volume do Android continua separado.")
-        Button(onClick = { openAudio.launch(arrayOf("audio/*")) }, enabled = !state.loading, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Selecionar áudio no aparelho") }
-        state.fileName?.let { Text(it, style = MaterialTheme.typography.titleSmall) }
+        Hint("O ganho vale só para este player; o volume do Android é independente.")
+        Button(onClick = { openAudio.launch(arrayOf("audio/*")) }, enabled = !state.loading, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Selecionar áudio") }
+        state.fileName?.let { Text(it, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
         if (state.loading) { LinearProgressIndicator(Modifier.fillMaxWidth()); Hint("Preparando áudio") }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-            Button(onClick = player::togglePlayback, enabled = state.ready, modifier = Modifier.weight(1f).heightIn(min = Space.touch)) {
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+            Button(onClick = player::togglePlayback, enabled = state.ready, modifier = Modifier.heightIn(min = Space.touch)) {
                 Glyph(if (state.playing) R.drawable.ic_pause else R.drawable.ic_play)
                 Spacer(Modifier.width(Space.sm)); Text(if (state.playing) "Pausar" else "Reproduzir")
             }
-            OutlinedButton(onClick = { player.reset(); seeking = null }, enabled = state.ready, modifier = Modifier.weight(1f).heightIn(min = Space.touch)) { Text("Restaurar") }
+            OutlinedButton(onClick = { player.reset(); seeking = null }, enabled = state.ready, modifier = Modifier.heightIn(min = Space.touch)) { Text("Restaurar") }
         }
         if (state.ready) {
             Slider(value = seeking ?: state.positionMs.toFloat(), onValueChange = { seeking = it },
@@ -84,17 +85,16 @@ private fun playbackTime(milliseconds: Int): String {
     }
     Panel {
         SectionLabel("Amplificação do arquivo")
-        Text("${mediaNumber(AudioGainMath.amplitudePercent(state.gainDb), 0)}%", style = InstrumentStyle, color = MaterialTheme.colorScheme.primary)
-        Metric("Ganho alvo da sessão", "+${mediaNumber(state.gainDb.toDouble())} dB")
+        InstrumentReading("${mediaNumber(AudioGainMath.amplitudePercent(state.gainDb), 0)}%")
+        Metric("Ganho alvo", "+${mediaNumber(state.gainDb.toDouble())} dB")
         Slider(value = state.gainDb, onValueChange = player::setGain, valueRange = 0f..12f, steps = 23,
             enabled = state.ready && state.effectAvailable)
-        Hint("0 dB = 100% de amplitude; +12 dB ≈ 398%. Ajustes em 0,5 dB via LoudnessEnhancer da sessão deste player.")
-        Metric("Efeito do aparelho", when { !state.ready -> "Selecione um áudio"; state.effectAvailable -> "LoudnessEnhancer disponível"; else -> "Não disponível" })
+        Hint("Amplitude nominal: 100% a 398% (0 a 12 dB), em passos de 0,5 dB.")
+        Metric("Efeito", when { !state.ready -> "Selecione um áudio"; state.effectAvailable -> "Disponível"; else -> "Não disponível" })
         state.effectError?.let { Hint(it) }
-        Hint("Ganho elevado pode distorcer picos e aumentar o volume ouvido. Comece em 0 dB e ajuste gradualmente. Não há promessa de proteção do alto-falante ou da audição.")
+        Hint("Aumente aos poucos: pode distorcer ou ficar muito alto. Sem proteção garantida da audição ou do alto-falante.")
     }
-    Hint("Sem permissão de microfone ou acesso amplo ao armazenamento. Reprodução pausa em segundo plano e encerra ao sair desta ferramenta.")
-    Hint("Perder o foco de áudio ou desconectar os fones pausa a reprodução. O NEXO Tools não retoma o som automaticamente.")
+    Hint("Sem microfone ou acesso amplo ao armazenamento. Pausa ao sair, perder o foco de áudio ou remover fones, sem retomar automaticamente.")
 }
 
 @Composable fun NightVisionScreen(vm: MainViewModel) {
@@ -150,11 +150,11 @@ private fun playbackTime(milliseconds: Int): String {
         exposureSlider = null
         if (allowed) controller.bind(owner, previewView, lens, rotation) else controller.unbind()
     }
-    PermissionPanel(arrayOf(Manifest.permission.CAMERA), "A câmera mostra e processa a luz disponível localmente. Imagens são salvas somente ao tocar em capturar e escolher um destino.") { revision++ }
+    PermissionPanel(arrayOf(Manifest.permission.CAMERA), "A prévia é processada no aparelho. Só salva imagens quando você captura e escolhe um destino.") { revision++ }
     Panel {
         Glyph(R.drawable.ic_moon)
         SectionLabel("Visão em pouca luz")
-        Hint("Filtro de luminosidade e cores sobre a câmera real. Não é visão infravermelha: escuridão total continua sem detalhes.")
+        Hint("Clareia a luz captada. Não é infravermelho e não revela detalhes na escuridão total.")
         Box(Modifier.fillMaxWidth().height(cameraPreviewHeight).background(Color.Black), contentAlignment = Alignment.Center) {
             if (allowed) AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
             frame?.let { bitmap -> Image(bitmap.asImageBitmap(), "Prévia processada da câmera", Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
@@ -162,29 +162,29 @@ private fun playbackTime(milliseconds: Int): String {
             if (!allowed) Text("Permita a câmera para iniciar", color = Color.White)
         }
         cameraState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
             OutlinedButton(onClick = { lens = if (lens == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK },
                 enabled = allowed && !cameraState.loading && cameraState.frontAvailable && cameraState.backAvailable && !saving,
-                modifier = Modifier.weight(1f).heightIn(min = Space.touch)) { Text("Trocar câmera") }
+                modifier = Modifier.heightIn(min = Space.touch)) { Text("Trocar câmera") }
             Button(onClick = { pendingExport = frame; export.launch("NEXO-visao-noturna.png") },
                 enabled = allowed && cameraState.ready && frame != null && !saving && pendingExport == null,
-                modifier = Modifier.weight(1f).heightIn(min = Space.touch)) { Text(if (saving) "Salvando" else "Capturar PNG") }
+                modifier = Modifier.heightIn(min = Space.touch)) { Text(if (saving) "Salvando" else "Capturar") }
         }
-        if (cameraState.error != null && allowed) TextButton(onClick = { revision++ }) { Text("Tentar câmera novamente") }
-        Hint("Captura salva a prévia processada, limitada a 640 × 480 pixels (ou orientação equivalente). Nenhum áudio é capturado.")
+        if (cameraState.error != null && allowed) TextButton(onClick = { revision++ }) { Text("Tentar novamente") }
+        Hint("PNG da prévia: até 640 × 480 px, conforme orientação. Sem áudio.")
     }
     Panel {
         SectionLabel("Luminosidade e tonalidade")
-        Metric("Filtro gamma", "${mediaNumber(brightness.toDouble())}× · gamma ${mediaNumber(1.0 / brightness, 2)}")
+        Metric("Clareamento", "${mediaNumber(brightness.toDouble())}×")
         Slider(value = brightness, onValueChange = { brightness = it }, valueRange = 1f..4f, enabled = allowed)
-        Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
             FilterChip(selected = tint == NightTint.GREEN, onClick = { tintName = NightTint.GREEN.name }, label = { Text("Verde") })
             FilterChip(selected = tint == NightTint.AMBER, onClick = { tintName = NightTint.AMBER.name }, label = { Text("Amarelo") })
         }
-        Hint("O filtro clareia luminância já captada; pode ampliar ruído. Cores são monocromáticas e não representam a cor original dos objetos.")
+        Hint("Pode ampliar ruído. As tonalidades não representam as cores reais.")
     }
     Panel {
-        SectionLabel("Recursos reais da câmera")
+        SectionLabel("Câmera")
         cameraState.controlError?.let { Hint(it) }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Lanterna", Modifier.weight(1f))
@@ -192,20 +192,20 @@ private fun playbackTime(milliseconds: Int): String {
         }
         if (!cameraState.torchAvailable) Hint("A câmera selecionada não oferece lanterna.")
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Boost de baixa luz do hardware", Modifier.weight(1f))
+            Text("Baixa luz (hardware)", Modifier.weight(1f))
             Switch(cameraState.lowLightEnabled, controller::setLowLight, enabled = allowed && cameraState.ready && cameraState.lowLightAvailable && !cameraState.controlsBusy)
         }
         Hint(cameraState.lowLightStatus)
-        Hint("Boost do hardware e lanterna não ficam ativos juntos. O boost pode ficar armado e só atuar quando a câmera detectar pouca luz.")
+        Hint("Baixa luz e lanterna são alternativas. O hardware decide quando o boost atua.")
         if (cameraState.exposureMin < cameraState.exposureMax) {
             val current = exposureSlider ?: cameraState.exposureIndex.toFloat()
-            Metric("Compensação de exposição", "${mediaNumber(current * cameraState.exposureStepEv, 2)} EV")
+            Metric("Exposição", "${mediaNumber(current * cameraState.exposureStepEv, 2)} EV")
             Slider(value = current.coerceIn(cameraState.exposureMin.toFloat(), cameraState.exposureMax.toFloat()), onValueChange = { exposureSlider = it },
                 onValueChangeFinished = { exposureSlider?.let { controller.setExposure(it.roundToInt()) }; exposureSlider = null },
                 valueRange = cameraState.exposureMin.toFloat()..cameraState.exposureMax.toFloat(),
                 steps = (cameraState.exposureMax - cameraState.exposureMin - 1).coerceAtLeast(0),
                 enabled = allowed && cameraState.ready && !cameraState.controlsBusy)
-            Hint("Limites e passo EV fornecidos pela câmera. Mais exposição pode aumentar borrão e reduzir a atualização.")
+            Hint("Limites da câmera. Mais exposição pode borrar ou reduzir a atualização.")
         } else Hint("Compensação de exposição não disponível nesta câmera.")
     }
     Hint("Análise local em até 10 quadros por segundo. A câmera e a lanterna param em segundo plano e são liberadas ao sair da ferramenta.")

@@ -30,9 +30,9 @@ fun PermissionPanel(permissions:Array<String>,explanation:String,onGranted:(()->
         onDispose{owner.lifecycle.removeObserver(observer)}
     }
     if(!granted) Panel {
-        SectionLabel(if(denied)"Permissão não concedida" else "Você controla o acesso")
+        SectionLabel(if(denied)"Acesso não autorizado" else "Permissão necessária")
         Hint(explanation)
-        Button(onClick={launcher.launch(permissions)}){Text("Permitir acesso")}
+        Button(onClick={launcher.launch(permissions)}){Text("Permitir")}
         if(denied) TextButton(onClick={context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:${context.packageName}")))}){Text("Abrir permissões do Android")}
     }
 }
