@@ -7,14 +7,20 @@ plugins {
 android {
     namespace = "br.com.nexotools"
     compileSdk = 37
+    ndkVersion = "28.2.13676358"
     defaultConfig {
         applicationId = "br.com.nexotools"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.2.1"
+        versionCode = 5
+        versionName = "1.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64") }
+        externalNativeBuild {
+            ndkBuild { arguments += listOf("NDK_APPLICATION_MK=${file("src/main/cpp/hev/Application.mk")}", "-j2") }
+        }
     }
+    externalNativeBuild { ndkBuild { path = file("src/main/cpp/hev/Android.mk") } }
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
