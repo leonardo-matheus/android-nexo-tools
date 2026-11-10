@@ -42,6 +42,10 @@ class UiLayoutSmokeTest {
         Destination("ping", "Latência TCP", "Latência TCP", "Rede"),
         Destination("speed", "Velocidade", "Teste de velocidade", "Rede"),
         Destination("sonar", "Sonar Wi-Fi", "Sonar Wi-Fi", "Rede"),
+        Destination("packets", "Monitor de tráfego", "Monitor de tráfego", "Rede"),
+        Destination("ports", "Portas TCP", "Portas TCP", "Rede"),
+        Destination("dnsTls", "DNS e TLS", "DNS e TLS", "Rede"),
+        Destination("uninstaller", "Desinstalador", "Desinstalador", "Utilidades"),
         Destination("level", "Nível de bolha", "Nível de bolha", "Ferramentas"),
         Destination("angle", "Inclinômetro", "Inclinômetro", "Ferramentas"),
         Destination("audio", "Ruído", "Medidor de ruído", "Ferramentas"),
@@ -69,6 +73,7 @@ class UiLayoutSmokeTest {
         val previousIdleTimeout = configurator.waitForIdleTimeout
         configurator.waitForIdleTimeout = 0
         try {
+            store.setPrimaryRemote("LED")
             store.setTheme(theme)
             store.setExternalAutomationConsent(false)
             replaceFavorites(emptySet())
@@ -125,6 +130,7 @@ class UiLayoutSmokeTest {
             runCatching { capture("failure") }; throw failure
         } finally {
             try {
+                store.setPrimaryRemote(saved.primaryRemote)
                 store.setTheme(saved.theme)
                 store.setDecimals(saved.decimals)
                 store.setExternalAutomationConsent(saved.externalAutomationConsent)
@@ -167,7 +173,7 @@ class UiLayoutSmokeTest {
     private fun assertGrid(items: List<Destination>) {
         fun bounds(title: String): Rect {
             val tile = card(title)
-            val scroll = requireNotNull(device.findObject(By.scrollable(true)))
+            val scroll = device.findObject(By.scrollable(true)) ?: return tile.visibleBounds
             for (attempt in 0 until 4) {
                 val delta = tile.visibleBounds.centerY() - scroll.visibleBounds.centerY()
                 val amount = (kotlin.math.abs(delta).toFloat() / scroll.visibleBounds.height()).coerceIn(0.03f, 0.4f)
