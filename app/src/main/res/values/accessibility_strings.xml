@@ -1,0 +1,4 @@
+<resources>
+    <string name="nexo_accessibility_label">NEXO Tools — macros escolhidas por você</string>
+    <string name="nexo_accessibility_description">Executa os toques, deslizes, Voltar e Início das macros que você criar e iniciar. Usa somente o nome do aplicativo em foco, mantido na memória. Não lê textos, conteúdo de telas, fotos, senhas ou área de transferência. A execução exige sua autorização no NEXO, serviço ativado e tela desbloqueada. Você pode interromper pela notificação; um gesto já iniciado pode concluir em até três segundos.</string>
+</resources>
