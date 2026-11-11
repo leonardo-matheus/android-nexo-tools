@@ -29,6 +29,8 @@ Para a ficha pública na Google Play, o proprietário deve publicar esta políti
 
 O desinstalador e a seleção de captura consultam aplicativos deste perfil somente no aparelho. A lista não é enviada nem gravada em histórico. A desinstalação sempre depende da tela de confirmação do Android.
 
+O acesso a dados de uso é opcional e habilitado manualmente nos ajustes do Android. No desinstalador, permite consultar o espaço de arquivos, dados e cache dos apps e o último uso registrado pelo sistema. Essas informações permanecem apenas em memória. A instalação pode ser consultada sem esse acesso; falta de registro de uso não significa que um app nunca foi usado. Na seleção múltipla, o Android confirma cada remoção e cancelar uma delas interrompe o lote.
+
 O monitor solicita autorização de VPN e opera localmente; nenhum servidor de VPN recebe os pacotes. O tráfego TCP/UDP continua para os destinos originais através de sockets protegidos. Não são instalados certificados, interceptado TLS ou bloqueado DNS privado. Protocolos não encaminhados podem deixar de funcionar enquanto a captura está ativa.
 
 A sessão continua quando o usuário abre outro aplicativo. Pode ser encerrada pelo NEXO, pela notificação quando permitida ou pelo controle de VPN do Android. Perder a conexão usada também encerra a sessão. Os últimos 3.000 pacotes (até 2.048 bytes por pacote), endereços, portas e identificação de app ficam em memória até limpar, iniciar nova sessão ou encerrar o processo. Exportar PCAP é uma ação explícita: o usuário escolhe o arquivo, que recebe os pacotes correspondentes aos filtros. Esse arquivo pode conter informações sensíveis das comunicações e permanece no local escolhido pelo usuário.
