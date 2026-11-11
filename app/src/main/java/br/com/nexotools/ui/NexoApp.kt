@@ -1,6 +1,10 @@
 package br.com.nexotools.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,11 +14,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -46,7 +51,7 @@ private val toolSpecs=listOf(
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun NexoApp(vm:MainViewModel) {
+@Composable fun NexoApp(vm:MainViewModel, onReady: () -> Unit = {}) {
     val prefs by vm.prefs.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
     val navigation by vm.navigation.collectAsStateWithLifecycle()
@@ -61,9 +66,13 @@ private val toolSpecs=listOf(
     var lastCatalog by rememberSaveable { mutableStateOf("home") }
     var backStack by rememberSaveable { mutableStateOf(emptyList<String>()) }
     val snackbar=remember { SnackbarHostState() }
-    NexoTheme(prefs?.theme?:"SYSTEM") {
-        val preferences=prefs
-        if(preferences==null) { SplashScreen(); return@NexoTheme }
+    val preferences=prefs
+    if (preferences == null) {
+        NexoTheme("SYSTEM") { BrandLoadingScreen() }
+        return
+    }
+    NexoTheme(preferences.theme) {
+        SideEffect { onReady() }
         if(!preferences.onboardingDone) { OnboardingScreen{vm.act{vm.preferences.completeOnboarding()}};return@NexoTheme }
         fun navigate(to:String){
             if(to==route)return
@@ -86,7 +95,7 @@ private val toolSpecs=listOf(
             containerColor=MaterialTheme.colorScheme.background,
             snackbarHost={SnackbarHost(snackbar,Modifier.imePadding())},
             topBar={TopAppBar(
-                title={if(route=="home") Text("NEXO TOOLS",fontWeight=FontWeight.Bold,letterSpacing=2.sp,style=MaterialTheme.typography.titleMedium)else Text(if(route in setOf("remotes","remoteLed","remoteLg"))"Controles IR" else titles[route]?:"NEXO Tools",style=MaterialTheme.typography.titleLarge,maxLines=1,overflow=TextOverflow.Ellipsis)},
+                title={if(route=="home") BrandHeader() else Text(if(route in setOf("remotes","remoteLed","remoteLg"))"Controles IR" else titles[route]?:"NEXO Tools",style=MaterialTheme.typography.titleLarge,maxLines=1,overflow=TextOverflow.Ellipsis)},
                 navigationIcon={if(!root)IconButton(onClick={back()}){Glyph(R.drawable.ic_arrow_left,"Voltar")}},
                 actions={
                     if(root){
@@ -100,10 +109,11 @@ private val toolSpecs=listOf(
                 listOf(Triple("home","Início",R.drawable.ic_star),Triple("network","Rede",R.drawable.ic_wifi),Triple("tools","Ferramentas",R.drawable.ic_wrench),Triple("utilities","Utilidades",R.drawable.ic_sliders_horizontal)).forEach{(key,label,icon)->NavigationBarItem(selected=route==key,onClick={navigate(key)},icon={Glyph(icon)},label={Text(label,maxLines=2,textAlign=androidx.compose.ui.text.style.TextAlign.Center)})}
             }}
         ){padding->
-            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),contentAlignment=Alignment.TopCenter){
+            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding().clipToBounds(),contentAlignment=Alignment.TopCenter){
                 Column(Modifier.widthIn(max=Dimensions.contentMax).fillMaxSize()) {
                     macroProgress?.let{progress->Surface(color=MaterialTheme.colorScheme.secondaryContainer){Row(Modifier.fillMaxWidth().padding(horizontal=Space.lg),verticalAlignment=Alignment.CenterVertically){Text(progress,Modifier.weight(1f),style=MaterialTheme.typography.labelLarge);TextButton({vm.cancelMacro()}){Text("Interromper")}}}}
                     key(route) {
+                    RouteEntrance {
                     if(route in setOf("remotes","remoteLed","remoteLg")) {
                         Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal=Space.lg,vertical=Space.xs)) {
                             val initialRemote = remember(route) {
@@ -143,16 +153,14 @@ private val toolSpecs=listOf(
                 }
                 }
                 }
+                }
             }
         }
     }
 }
-@Composable private fun SplashScreen(){
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Space.lg)){Text("NEXO",style=InstrumentStyle,color=MaterialTheme.colorScheme.primary);Text("TOOLS",letterSpacing=6.sp);CircularProgressIndicator(Modifier.size(Dimensions.glyph),strokeWidth=Dimensions.stroke)}}
-}
 @Composable private fun OnboardingScreen(onComplete:()->Unit){
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),contentAlignment=Alignment.Center){Column(Modifier.widthIn(max=Dimensions.onboardingMax).padding(Space.xl).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(Space.xl)){
-        Text("NEXO TOOLS",color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.titleLarge,letterSpacing=2.sp)
+        BrandHeader()
         Text("Seu próximo trabalho,\nna medida certa.",style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.SemiBold)
         Panel {Glyph(R.drawable.ic_ruler);SectionLabel("Instrumentos no seu bolso");Hint("Nível, inclinação e ruído com sensores do seu aparelho. Calibre antes de usar e confira a estabilidade.")}
         Panel {Glyph(R.drawable.ic_wifi);SectionLabel("Entenda sua conexão");Hint("Sinal Wi-Fi, rede móvel e latência TCP. Os dados disponíveis dependem do Android e do hardware.")}
@@ -182,7 +190,10 @@ private val toolSpecs=listOf(
             tools.chunked(columns).forEach{row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(Space.md)){
                 row.forEach{tool->
                     val pinned=tool.route in favorites
-                    Card(onClick={onNavigate(tool.route)},modifier=Modifier.weight(1f).height(tileHeight),shape=androidx.compose.foundation.shape.RoundedCornerShape(Dimensions.panelRadius),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)){
+                    val interactions=remember { MutableInteractionSource() }
+                    val pressed by interactions.collectIsPressedAsState()
+                    val scale by animateFloatAsState(if(pressed) .98f else 1f, spring(dampingRatio=.9f,stiffness=600f), label="pressionar ferramenta")
+                    Card(onClick={onNavigate(tool.route)},interactionSource=interactions,modifier=Modifier.weight(1f).height(tileHeight).graphicsLayer { scaleX=scale;scaleY=scale },shape=androidx.compose.foundation.shape.RoundedCornerShape(Dimensions.panelRadius),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)){
                         Column(Modifier.fillMaxSize().padding(Space.md),verticalArrangement=Arrangement.spacedBy(Space.sm)){
                             Row(Modifier.fillMaxWidth().height(Space.touch),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
                                 Glyph(tool.icon)

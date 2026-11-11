@@ -5,4 +5,12 @@
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:windowBackground">#0B2030</item>
     </style>
+    <style name="Theme.Nexo.StartingBase" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/nexo_brand_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/nexo_splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.Nexo</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/nexo_brand_background</item>
+    </style>
+    <style name="Theme.Nexo.Starting" parent="Theme.Nexo.StartingBase" />
 </resources>
