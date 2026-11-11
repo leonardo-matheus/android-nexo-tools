@@ -345,6 +345,7 @@ private fun measured(value: Double?, decimals: Int = 1, unit: String = ""): Stri
             Metric("Telefone", "Sinal e seleção de SIM")
             Metric("VPN local", "Monitor de tráfego")
             Metric("Apps instalados", "Desinstalador e filtro de captura")
+            Metric("Acesso ao uso", "Tamanho dos apps e último uso; opcional")
             Hint("Microfone e câmera param ao deixar a ferramenta ou enviar o app para segundo plano. A captura VPN continua até você parar, revogar a VPN ou perder a conexão usada.")
             Hint("Android pode ocultar dados Wi-Fi quando a localização está desligada. O NEXO Tools não solicita localização em segundo plano.")
             OutlinedButton(onClick = { runCatching { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) } }, modifier = Modifier.fillMaxWidth().heightIn(min = Space.touch)) { Text("Gerenciar permissões no Android") }
