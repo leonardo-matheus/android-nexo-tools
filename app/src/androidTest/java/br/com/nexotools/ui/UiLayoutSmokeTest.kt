@@ -3,12 +3,14 @@ package br.com.nexotools.ui
 import android.content.Intent
 import android.graphics.Rect
 import android.hardware.ConsumerIrManager
+import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.Configurator
 import androidx.test.uiautomator.Direction
+import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
@@ -109,6 +111,7 @@ class UiLayoutSmokeTest {
                     "wifi" -> {
                         find(By.text("Detalhes da conexão")).click()
                         waitFor(By.text("Detalhes do Wi-Fi")); capture("wifiDetails"); click(By.desc("Voltar"))
+                        waitFor(By.text("Analisador Wi-Fi"))
                     }
                     "angle" -> { find(By.text("X · Pitch")); find(By.text("Y · Roll")); capture("angle-axes") }
                     "remotes" -> remoteChecks()
@@ -127,6 +130,7 @@ class UiLayoutSmokeTest {
             waitFor(By.text("Permissões e privacidade")); capture("privacy")
             assertEquals("A calibração deve permanecer intacta", saved.calibration, store.state.first().calibration)
         } catch (failure: Throwable) {
+            runCatching { device.dumpWindowHierarchy(File(output, "failure.xml")) }
             runCatching { capture("failure") }; throw failure
         } finally {
             try {
@@ -144,15 +148,29 @@ class UiLayoutSmokeTest {
         withTimeout(timeout) { store.state.first { it.favorites.intersect(routes) == desired.intersect(routes) } }
     }
     private fun category(label: String) {
-        repeat(3) { device.findObject(By.desc("Voltar"))?.let { it.click(); device.wait(Until.gone(By.desc("Voltar")), 500) } }
+        val catalog = By.desc("Histórico")
+        for (attempt in 0 until 5) {
+            refreshTree()
+            if (device.wait(Until.hasObject(catalog), 300)) break
+            try { device.findObject(By.desc("Voltar"))?.click() }
+            catch (_: StaleObjectException) { /* Requery the toolbar after the destination changes. */ }
+            device.wait(Until.hasObject(catalog), 500)
+        }
+        assertTrue("O catálogo deve estar visível antes de trocar a categoria", device.wait(Until.hasObject(catalog), timeout))
         // Visiting another catalog resets the route-scoped scroll position before each search.
         listOf(if (label == "Início") "Rede" else "Início", label).forEach { destination ->
+            waitFor(By.text(destination))
             (device.findObjects(By.text(destination)).lastOrNull() ?: error("Categoria ausente: $destination")).click()
             waitFor(By.text(if (destination == "Início") "Favoritos" else destination).clickable(false))
         }
     }
-    private fun waitFor(selector: BySelector): UiObject2 =
-        device.wait(Until.findObject(selector), timeout) ?: error("Elemento ausente: $selector")
+    private fun refreshTree() {
+        if (Build.VERSION.SDK_INT >= 34) instrumentation.uiAutomation.clearCache()
+    }
+    private fun waitFor(selector: BySelector): UiObject2 {
+        refreshTree()
+        return device.wait(Until.findObject(selector), timeout) ?: error("Elemento ausente: $selector")
+    }
     private fun click(selector: BySelector) { waitFor(selector).click() }
     private fun find(selector: BySelector): UiObject2 {
         device.findObject(selector)?.let { return it }
@@ -196,7 +214,13 @@ class UiLayoutSmokeTest {
         waitFor(By.desc(Pattern.compile("^TV: .+")))
         checkRemotePage(IrProfiles.lgTv.commands.filterNot { it.id.startsWith("DIGIT_") }.map { "TV: ${it.label}" }.toSet(), "remoteLg")
         findOnRemotePages(By.desc("Teclado numérico da TV")).click(); waitFor(By.text("Teclado da TV"))
-        ((1..9).toList() + 0).forEach { digit -> val key = find(By.desc("TV: $digit")); assertTarget(key); assertFalse(key.isEnabled) }
+        ((1..9).toList() + 0).forEach { digit ->
+            var key = find(By.desc("TV: $digit"))
+            while (!key.isClickable && key.parent != null) key = key.parent
+            assertTrue("Dígito deve pertencer a um botão", key.isClickable)
+            assertTarget(key)
+            assertFalse(key.isEnabled)
+        }
         capture("remoteLg-keypad"); find(By.text("Fechar")).click()
         if (device.hasObject(By.desc("Configurar controle IR"))) click(By.desc("Configurar controle IR"))
         else { click(By.desc("Selecionar e configurar controle IR")); click(By.text("Configurar controle IR")) }
